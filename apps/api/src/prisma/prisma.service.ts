@@ -8,8 +8,14 @@ export class PrismaService extends PrismaClient {
       await app.close();
     };
 
-    process.once('beforeExit', shutdown);
-    process.once('SIGINT', shutdown);
-    process.once('SIGTERM', shutdown);
+    process.once('beforeExit', () => {
+      void shutdown();
+    });
+    process.once('SIGINT', () => {
+      void shutdown();
+    });
+    process.once('SIGTERM', () => {
+      void shutdown();
+    });
   }
 }
