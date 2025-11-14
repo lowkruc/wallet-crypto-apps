@@ -1,0 +1,32 @@
+{
+  "name": "test-nestjs-vite-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "install:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
+    "dev": "dotenv -e .env.local -- concurrently \"pnpm --filter api start:dev\" \"pnpm --filter admin-web dev\"",
+    "dev:api": "dotenv -e .env.local -- pnpm --filter api start:dev",
+    "dev:admin": "dotenv -e .env.local -- pnpm --filter admin-web dev",
+    "build": "dotenv -e .env.production -- pnpm -r --parallel build",
+    "build:api": "dotenv -e .env.production -- pnpm --filter api build",
+    "build:admin": "dotenv -e .env.production -- pnpm --filter admin-web build",
+    "lint": "pnpm -r lint",
+    "lint:api": "pnpm --filter api lint",
+    "lint:admin": "pnpm --filter admin-web lint",
+    "test": "pnpm -r test",
+    "test:api": "pnpm --filter api test",
+    "test:admin": "pnpm --filter admin-web test",
+    "migrate": "dotenv -e .env.production -- pnpm --filter api run migration:run",
+    "docker:build": "docker compose --env-file .env.production build",
+    "docker:up": "docker compose --env-file .env.local up --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "dotenv-cli": "^7.4.2"
+  },
+  "packageManager": "pnpm@9.12.0+sha512.4abf725084d7bcbafbd728bfc7bee61f2f791f977fd87542b3579dcb23504d170d46337945e4c66485cd12d588a0c0e570ed9c477e7ccdd8507cf05f3f92eaca"
+}
