@@ -88,7 +88,7 @@ jobs:
       SSH_DEPLOY_DIR: ${{ vars.SSH_TARGET_DIR || vars.TARGET_DIR || secrets.SSH_TARGET_DIR }}
       SSH_DEPLOY_HOST: ${{ format('{0}@{1}', secrets.SSH_USER, secrets.SSH_HOST) }}
       ENV_FILE: .env.production
-      DOCKER_REGISTRY: ${{ env.IMAGE_PREFIX }}
+      DOCKER_REGISTRY: ${{ vars.IMAGE_PREFIX || format('ghcr.io/{0}', github.repository) }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup SSH
