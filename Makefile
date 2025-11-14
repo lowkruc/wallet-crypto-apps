@@ -11,7 +11,7 @@ ADMIN_IMAGE ?= $(DOCKER_REGISTRY)-admin-web
 PROXY_IMAGE ?= $(DOCKER_REGISTRY)-reverse-proxy
 IMAGE_TAG ?= latest
 
-.PHONY: bootstrap dev dev-api dev-admin build lint test migrate docker-up docker-down docker-build push-images deploy ssh
+.PHONY: bootstrap dev dev-api dev-admin build lint test migrate migrate-dev docker-up docker-down docker-build push-images deploy ssh
 
 bootstrap:
 	pnpm install
@@ -36,6 +36,9 @@ test:
 
 migrate:
 	pnpm migrate
+
+migrate-dev:
+	pnpm migrate:dev
 
 docker-up:
 	ENV_FILE=$(ENV_FILE) pnpm docker:up

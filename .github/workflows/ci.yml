@@ -26,6 +26,18 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     needs: lint-test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wallet
+          POSTGRES_USER: wallet
+          POSTGRES_PASSWORD: wallet
+        options: >-
+          --health-cmd="pg_isready -U wallet -d wallet"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

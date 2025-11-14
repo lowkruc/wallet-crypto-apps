@@ -20,6 +20,9 @@
     "test:api": "pnpm --filter api test",
     "test:admin": "pnpm --filter admin-web test",
     "migrate": "dotenv -e .env.production -- pnpm --filter api run migration:run",
+    "migrate:dev": "dotenv -e .env.local -- pnpm --filter api run migrate:dev",
+    "db:up": "docker compose --env-file .env.local up postgres -d",
+    "db:down": "docker compose down postgres",
     "docker:build": "docker compose --env-file .env.production build",
     "docker:up": "docker compose --env-file .env.local up --build",
     "docker:down": "docker compose down"

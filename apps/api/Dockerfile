@@ -21,9 +21,10 @@ RUN pnpm install --filter api... --prod --frozen-lockfile
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app/apps/api
+RUN corepack enable
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=prod-deps /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
 COPY apps/api/package.json ./package.json
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

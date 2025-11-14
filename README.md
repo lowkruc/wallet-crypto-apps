@@ -5,7 +5,7 @@ This repo hosts a small pnpm-based monorepo with two apps:
 - `apps/api`: a NestJS API
 - `apps/admin-web`: a Vite + React admin interface
 
-Both projects share dependencies through pnpm workspaces and rely on the same environment files stored at the repo root. Local development defaults to `.env.local`, production tooling expects `.env.production`.
+Both projects share dependencies through pnpm workspaces and rely on the same environment files stored at the repo root. Local development defaults to `.env.local`, production tooling expects `.env.production`. A shared PostgreSQL instance—managed through Docker Compose—backs the API via Prisma ORM.
 
 ## Getting started
 
@@ -35,21 +35,34 @@ Important keys:
 
 - `API_PORT`, `ADMIN_WEB_PORT`: what the raw services listen on (3000/4173 locally).
 - `API_SERVER_NAME`, `ADMIN_SERVER_NAME`, `NGINX_PORT`: only required in `.env.production` for the nginx reverse proxy that runs in deployment.
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`, `DATABASE_URL`: connection settings consumed by Prisma/PostgreSQL. `.env.local` targets the local Docker container (`localhost:5432`), `.env.production` points at the `postgres` service defined in `docker-compose.deploy.yml`.
 
 Anything sensitive—SSH host/user/key, registry, etc.—should stay in GitHub secrets/variables or your shell, not in these files.
 
 ## Docker
 
-Dockerfiles live next to each app plus `infra/nginx` for the shared reverse proxy. Common commands sit in the repo root `Makefile`:
+Dockerfiles live next to each app plus `infra/nginx` for the shared reverse proxy. PostgreSQL ships as another service inside both compose files so the DB travels with the stack. Common commands sit in the repo root `Makefile`:
 
 ```bash
-make docker-up         # builds both services locally with .env.local
+make docker-up         # builds API/admin/postgres locally with .env.local
 make docker-down
 make docker-build      # builds using .env.production
 make push-images       # builds + pushes ghcr images (requires DOCKER_REGISTRY env)
 ```
 
 `docker-compose.yml` exposes the API on `localhost:${API_PORT}` and the admin on `localhost:${ADMIN_WEB_PORT}` with no nginx dependency. In production stick to `docker-compose.deploy.yml`, which consumes the three registry images (API, admin, reverse proxy). `make deploy` rsyncs the repo to a VM and runs that compose file with your `.env.production` values so nginx can terminate on the domains you set.
+
+## Database & Prisma
+
+The Nest API relies on Prisma ORM with PostgreSQL. Helpful commands:
+
+```bash
+pnpm migrate:dev   # uses .env.local (development DB)
+pnpm migrate       # uses .env.production (mirrors deploy compose)
+pnpm --filter api run prisma:generate
+```
+
+Docker Compose brings up PostgreSQL automatically. When the API container starts (locally or on the VM) it runs `prisma migrate deploy` before launching NestJS so schema changes deploy alongside the new release.
 
 ## CI/CD
 
@@ -86,7 +99,7 @@ Makefile
 | Run tests      | `pnpm test`            |
 | Lint           | `pnpm lint`            |
 | Build          | `pnpm build`           |
-| Migrations     | `pnpm migrate` (update script in `apps/api/package.json`)
+| Migrations     | `pnpm migrate` (prod) / `pnpm migrate:dev` (dev)
 | Deploy via SSH | `make deploy`          |
 
 Feel free to plug in your own DB, ORM, or additional apps—the workspace setup should handle it.
