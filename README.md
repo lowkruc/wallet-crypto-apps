@@ -1,4 +1,4 @@
-# test-nestjs-vite-monorepo
+# Wallet Crypto Apps
 
 This repo hosts a small pnpm-based monorepo with two apps:
 
