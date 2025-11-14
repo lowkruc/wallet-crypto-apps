@@ -1,0 +1,16 @@
+# Node / pnpm
+node_modules/
+pnpm-debug.log
+
+# Build artifacts
+dist/
+coverage/
+
+# Prisma
+apps/api/prisma/node_modules/
+
+# Env files generated locally or for CI
+.env.*
+!.env.local
+!.env.production
+!.env.example
