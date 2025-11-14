@@ -62,5 +62,6 @@ ssh:
 deploy:
 	@test -n "$(SSH_DEPLOY_HOST)" || (echo "SSH_DEPLOY_HOST must be set" && exit 1)
 	@test -n "$(SSH_DEPLOY_DIR)" || (echo "SSH_DEPLOY_DIR must be set" && exit 1)
+	ssh $(SSH_DEPLOY_HOST) 'mkdir -p $(SSH_DEPLOY_DIR)'
 	rsync -az --delete --exclude '.git' --exclude 'node_modules' ./ $(SSH_DEPLOY_HOST):$(SSH_DEPLOY_DIR)
-	ssh $(SSH_DEPLOY_HOST) 'cd $(SSH_DEPLOY_DIR) && ENV_FILE=$(ENV_FILE) IMAGE_TAG=$(IMAGE_TAG) docker compose -f docker-compose.deploy.yml pull && ENV_FILE=$(ENV_FILE) IMAGE_TAG=$(IMAGE_TAG) docker compose -f docker-compose.deploy.yml up -d'
+	ssh $(SSH_DEPLOY_HOST) 'cd $(SSH_DEPLOY_DIR) && ENV_FILE=$(ENV_FILE) IMAGE_TAG=$(IMAGE_TAG) DOCKER_REGISTRY=$(DOCKER_REGISTRY) docker compose -f docker-compose.deploy.yml pull && ENV_FILE=$(ENV_FILE) IMAGE_TAG=$(IMAGE_TAG) DOCKER_REGISTRY=$(DOCKER_REGISTRY) docker compose -f docker-compose.deploy.yml up -d'
