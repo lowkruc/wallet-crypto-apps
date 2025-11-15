@@ -9,6 +9,7 @@ NestJS + Prisma service that backs the wallet admin dashboard. It exposes auth, 
 - `.env.local` / `.env.production` with:
   - `DATABASE_URL` (Prisma connection string)
   - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`
+  - `JWT_SECRET` (signing secret) and `JWT_EXPIRES_IN` (token TTL, e.g. `1h`)
 
 ## Commands
 
@@ -32,6 +33,14 @@ Run these from the repository root so the shared env files load automatically:
 - **Transaction** – Uses the `TransactionType` enum (`DEPOSIT`, `TRANSFER`) to track movements plus optional `fromWallet` / `toWallet` links for analytics queries. Indexes cover common filters (user/date, amount).
 
 After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` locally (with `.env.local`) and commit both the migration folder under `apps/api/prisma/migrations` and the updated generated client.
+
+## Auth module
+
+- `POST /auth/register` hashes the password with Argon2, creates a default IDR wallet, and returns the JWT plus wallet metadata.
+- `POST /auth/login` validates the credentials and issues a JWT signed by `JWT_SECRET`.
+- `GET /wallets/me` is guarded by `JwtAuthGuard` and returns the wallets connected to the authenticated user. Upcoming wallet tasks will extend this module with detailed summaries.
+
+The Jest suite includes e2e-style specs (`src/auth/auth.controller.spec.ts`) that override Prisma with an in-memory adapter, so no local Postgres setup is needed to validate auth flows.
 
 ## Development flow
 

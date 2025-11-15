@@ -46,6 +46,7 @@ Important keys:
 - `API_PORT`, `ADMIN_WEB_PORT`: what the raw services listen on (3000/4173 locally).
 - `API_SERVER_NAME`, `ADMIN_SERVER_NAME`, `NGINX_PORT`: only required in `.env.production` for the nginx reverse proxy that runs in deployment.
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`, `DATABASE_URL`: connection settings consumed by Prisma/PostgreSQL. `.env.local` targets the local Docker container (`localhost:5432`), `.env.production` points at the `postgres` service defined in `docker-compose.deploy.yml`.
+- `JWT_SECRET`, `JWT_EXPIRES_IN`: signing secret + TTL for the Nest auth module. Defaults are development-friendly but must be overridden in production.
 
 Anything sensitive—SSH host/user/key, registry, etc.—should stay in GitHub secrets/variables or your shell, not in these files.
 
@@ -82,7 +83,13 @@ Prisma currently tracks three core entities:
 - `Wallet`: belongs to a user, defaults to currency `IDR`, and keeps a decimal `balance`.
 - `Transaction`: logs deposits/transfers through the `TransactionType` enum and links to origin/destination wallets for analytics.
 
-Generated Prisma Client types surface these models inside the Nest services so future use cases (auth, deposit, transfer) can plug in immediately.
+Generated Prisma Client types surface these models inside the Nest services. The auth module builds on them to provision default wallets and return JWT-secured sessions.
+
+### Auth endpoints
+
+- `POST /auth/register` – accepts `{ email, password, name? }`, hashes the password, provisions a default IDR wallet, and returns `{ accessToken, user: { id, email, walletId } }`.
+- `POST /auth/login` – validates credentials, issues a JWT (using `JWT_SECRET` / `JWT_EXPIRES_IN`), and returns the same payload.
+- `GET /wallets/me` – protected by the JWT guard; currently returns the wallets belonging to the token subject. Future wallet tasks will expand this module further.
 
 ## CI/CD
 
