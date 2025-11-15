@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { apiClient } from '@/lib/api-client'
 import { Input } from '@/components/ui/input'
+import AppLayout from '@/components/layout/AppLayout'
 
 type WalletSummary = {
   id: string
@@ -30,9 +31,10 @@ const formatBalance = (value: string, currency: string) => {
   return formatter.format(Number(value))
 }
 
+const formatWalletId = (id: string) => (id.length <= 10 ? id : `${id.slice(0, 4)}…${id.slice(-4)}`)
+
 const DashboardPage = () => {
   const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
   const [wallets, setWallets] = useState<WalletSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -86,40 +88,51 @@ const DashboardPage = () => {
     </div>
   )
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background px-4 py-12">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <p className="text-xs uppercase tracking-[0.35em] text-primary/80">Wallet overview</p>
-          <h1 className="text-3xl font-semibold text-foreground sm:text-4xl">
-            Welcome back, {user?.name ?? user?.email ?? 'there'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Balances, recent movements, and session controls live here. Refresh anytime to pull the latest data.
-          </p>
-        </header>
+  const refreshAction = (
+    <Button variant="ghost" className="rounded-full" onClick={() => void fetchWallets()} disabled={loading}>
+      <RefreshCcw className="mr-2 h-4 w-4" />
+      Refresh
+    </Button>
+  )
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="md:col-span-2 border border-border/70 bg-card/90 backdrop-blur">
+  return (
+    <AppLayout
+      title={`Welcome back, ${user?.name ?? user?.email ?? 'there'}`}
+      description="Balances, recent movements, and controls for your reviewer session."
+      actions={refreshAction}
+    >
+      {error && (
+        <p className="rounded-2xl border border-destructive/60 bg-destructive/10 px-4 py-2 text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      )}
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)]">
+          <Card className="border border-border/70 bg-card/90">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="h-5 w-5 text-primary" />
                 Main balance
               </CardTitle>
-              <CardDescription>The wallet you land on first when signing in.</CardDescription>
+              <CardDescription>Primary wallet linked to this profile.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               {highlightedWallet ? (
                 <>
-                  <p className="text-2xl font-semibold text-foreground">
+                  <p className="text-4xl font-semibold text-foreground">
                     {formatBalance(highlightedWallet.balance, highlightedWallet.currency)}
                   </p>
-                  <div className="text-sm text-muted-foreground">
-                    <p>ID: {highlightedWallet.id}</p>
-                    <p>Currency: {highlightedWallet.currency}</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                      <p className="text-xs text-muted-foreground">Wallet ID</p>
+                      <p className="font-mono text-base text-foreground">{formatWalletId(highlightedWallet.id)}</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                      <p className="text-xs text-muted-foreground">Currency</p>
+                      <p className="text-base font-medium text-foreground">{highlightedWallet.currency}</p>
+                    </div>
                   </div>
                   <Button
-                    variant="default"
                     className="w-full"
                     onClick={() => {
                       setDepositForm({
@@ -136,8 +149,8 @@ const DashboardPage = () => {
                 </>
               ) : loading ? (
                 <div className="space-y-2">
-                  <div className="h-8 w-40 animate-pulse rounded-full bg-muted" />
-                  <div className="h-3 w-24 animate-pulse rounded-full bg-muted" />
+                  <div className="h-10 w-48 animate-pulse rounded-full bg-muted" />
+                  <div className="h-4 w-32 animate-pulse rounded-full bg-muted" />
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No wallet found for this profile.</p>
@@ -145,29 +158,31 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70 bg-background/80 backdrop-blur">
+          <Card className="border border-border/70 bg-background/80">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wallet2 className="h-5 w-5 text-primary" />
-                Session & actions
+                Snapshot
               </CardTitle>
-              <CardDescription>Sign out or refresh balances if another reviewer made changes.</CardDescription>
+              <CardDescription>Live portfolio stats.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <Button variant="secondary" onClick={logout} className="w-full">
-                Log out
-              </Button>
-              <Button variant="ghost" onClick={() => void fetchWallets()} disabled={loading} className="w-full">
-                <RefreshCcw className="mr-2 h-4 w-4" /> Refresh balances
-              </Button>
-              {error && (
-                <p className="rounded-2xl border border-destructive/60 bg-destructive/10 px-4 py-2 text-xs text-destructive" role="alert">
-                  {error}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            <CardContent className="flex h-full flex-col gap-4">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 px-4 py-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Wallets</p>
+                  <p className="text-2xl font-semibold text-foreground">{wallets.length}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Primary currency</p>
+                  <p className="text-base font-medium text-foreground">{highlightedWallet?.currency ?? '—'}</p>
+                </div>
+              </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4 text-sm text-muted-foreground">
+              <p>Balances refresh after each deposit. Use the refresh action above to sync changes from other reviewers.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
         {loading ? (
           renderSkeleton()
@@ -180,13 +195,13 @@ const DashboardPage = () => {
                   <CardDescription>Created {new Date(wallet.createdAt).toLocaleDateString()}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-2xl font-semibold text-foreground">{formatBalance(wallet.balance, wallet.currency)}</p>
-                  <p className="text-xs text-muted-foreground">ID: {wallet.id}</p>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setDepositForm({ walletId: wallet.id, currency: wallet.currency, amount: '' })
-                      setIsDepositing(true)
+                <p className="text-2xl font-semibold text-foreground">{formatBalance(wallet.balance, wallet.currency)}</p>
+                <p className="text-xs text-muted-foreground">ID: {formatWalletId(wallet.id)}</p>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setDepositForm({ walletId: wallet.id, currency: wallet.currency, amount: '' })
+                    setIsDepositing(true)
                     }}
                     className="w-full"
                   >
@@ -262,7 +277,7 @@ const DashboardPage = () => {
                     </option>
                     {wallets.map((wallet) => (
                       <option key={wallet.id} value={wallet.id}>
-                        {wallet.currency} — {wallet.id.slice(0, 6)}…
+                        {wallet.currency} — {formatWalletId(wallet.id)}
                       </option>
                     ))}
                   </select>
@@ -310,8 +325,7 @@ const DashboardPage = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </AppLayout>
   )
 }
 

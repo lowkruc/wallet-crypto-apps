@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import DashboardPage from '@/pages/DashboardPage'
 import { useAuthStore } from '@/store/auth'
 
@@ -13,6 +14,12 @@ vi.mock('@/lib/api-client', () => ({
 }))
 
 const mockedApi = await import('@/lib/api-client')
+const renderDashboard = () =>
+  render(
+    <MemoryRouter initialEntries={['/dashboard']}>
+      <DashboardPage />
+    </MemoryRouter>,
+  )
 
 describe('DashboardPage', () => {
   beforeEach(() => {
@@ -39,7 +46,7 @@ describe('DashboardPage', () => {
       ],
     })
 
-    render(<DashboardPage />)
+    renderDashboard()
 
     await screen.findByText(/main balance/i)
     expect(screen.getByText(/usd wallet/i)).toBeVisible()
@@ -49,7 +56,7 @@ describe('DashboardPage', () => {
   it('shows an error message when request fails', async () => {
     vi.mocked(mockedApi.apiClient.get).mockRejectedValue(new Error('boom'))
 
-    render(<DashboardPage />)
+    renderDashboard()
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/can’t load wallets/i)
@@ -66,7 +73,7 @@ describe('DashboardPage', () => {
     })
     vi.mocked(mockedApi.apiClient.post).mockResolvedValue({ data: {} })
 
-    render(<DashboardPage />)
+    renderDashboard()
 
     const depositButton = await screen.findByRole('button', { name: /deposit funds/i })
     await user.click(depositButton)
