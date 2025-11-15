@@ -38,11 +38,12 @@ After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` 
 
 `apps/api/src/main.ts` enables CORS automatically based on the `CORS_ORIGINS` env var (comma-separated). Update `.env.local` and `.env.production` with the allowed origins (e.g., `http://localhost:5173` for Vite dev, `https://wc.example.com` for production). The admin web uses `VITE_API_BASE_URL` env vars to target the correct host and relies on this CORS configuration to succeed.
 
-## Auth module
+## Auth & wallets
 
 - `POST /auth/register` hashes the password with Argon2, creates a default IDR wallet, and returns the JWT plus wallet metadata.
 - `POST /auth/login` validates the credentials and issues a JWT signed by `JWT_SECRET`.
-- `GET /wallets/me` is guarded by `JwtAuthGuard` and returns the wallets connected to the authenticated user. Upcoming wallet tasks will extend this module with detailed summaries.
+- `GET /wallets/me` is guarded by `JwtAuthGuard` and returns the wallets connected to the authenticated user.
+- `POST /wallets/:id/deposit` validates ownership + positive amounts, updates balances inside a Prisma transaction, and returns the updated wallet plus the new transaction row.
 - `GET /wallets/:id/transactions?limit=` returns the recent transactions for a wallet that belongs to the current user. Limit defaults to 20 and caps at 100.
 
 The Jest suite includes e2e-style specs (`src/auth/auth.controller.spec.ts`) that override Prisma with an in-memory adapter, so no local Postgres setup is needed to validate auth flows.

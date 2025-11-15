@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload';
@@ -8,6 +16,7 @@ import {
   WalletTransactionDto,
   WalletTransactionsResponseDto,
 } from './dto/wallet-transactions-response.dto';
+import { DepositWalletDto } from './dto/deposit-wallet.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('wallets')
@@ -59,6 +68,36 @@ export class WalletsController {
         toWalletId: tx.toWalletId,
         createdAt: tx.createdAt,
       })),
+    };
+  }
+
+  @Post(':id/deposit')
+  async deposit(
+    @Param('id') walletId: string,
+    @Body() dto: DepositWalletDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const result = await this.walletsService.deposit(
+      walletId,
+      user.sub,
+      dto.amount,
+      dto.currency,
+    );
+    return {
+      wallet: {
+        id: result.wallet.id,
+        userId: result.wallet.userId,
+        balance: result.wallet.balance.toString(),
+        currency: result.wallet.currency,
+        createdAt: result.wallet.createdAt,
+      },
+      transaction: {
+        id: result.transaction.id,
+        type: result.transaction.type,
+        amount: result.transaction.amount.toString(),
+        currency: result.transaction.currency,
+        createdAt: result.transaction.createdAt,
+      },
     };
   }
 }

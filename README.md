@@ -90,11 +90,13 @@ Prisma currently tracks three core entities:
 
 Generated Prisma Client types surface these models inside the Nest services. The auth module builds on them to provision default wallets and return JWT-secured sessions.
 
-### Auth endpoints
+### Auth endpoints & wallets
 
 - `POST /auth/register` – accepts `{ email, password, name? }`, hashes the password, provisions a default IDR wallet, and returns `{ accessToken, user: { id, email, walletId } }`.
 - `POST /auth/login` – validates credentials, issues a JWT (using `JWT_SECRET` / `JWT_EXPIRES_IN`), and returns the same payload.
-- `GET /wallets/me` – protected by the JWT guard; currently returns the wallets belonging to the token subject. Future wallet tasks will expand this module further.
+- `GET /wallets/me` – protected by the JWT guard; currently returns the wallets belonging to the token subject.
+- `POST /wallets/:id/deposit` – validates ownership + positive amount, updates the balance within a Prisma transaction, and logs the movement.
+- `GET /wallets/:id/transactions?limit=` – returns paginated transactions for the wallet owned by the current user.
 
 ## CI/CD
 

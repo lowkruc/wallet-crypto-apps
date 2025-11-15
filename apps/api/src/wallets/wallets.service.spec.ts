@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +11,7 @@ describe('WalletsService', () => {
   let prisma: PrismaService & {
     wallet: { findMany: jest.Mock; findFirst: jest.Mock };
     transaction: { findMany: jest.Mock };
+    $transaction: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -27,6 +28,7 @@ describe('WalletsService', () => {
             transaction: {
               findMany: jest.fn(),
             },
+            $transaction: jest.fn(),
           },
         },
       ],
@@ -99,5 +101,52 @@ describe('WalletsService', () => {
       take: 10,
     });
     expect(result).toEqual({ wallet, transactions: txs });
+  });
+
+  it('rejects non-positive deposits', async () => {
+    await expect(
+      service.deposit('wallet-1', 'user-1', 0, 'IDR'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('deposits and records transaction', async () => {
+    const wallet = {
+      id: 'wallet-1',
+      userId: 'user-1',
+      currency: 'IDR',
+      balance: decimal(100),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    prisma.wallet.findFirst.mockResolvedValue(wallet);
+    prisma.$transaction.mockImplementation(
+      async (
+        callback: (tx: any) => Promise<[typeof wallet, { id: string }]>,
+      ) => {
+        const ctx = {
+          wallet: {
+            update: jest.fn().mockResolvedValue({
+              ...wallet,
+              balance: wallet.balance.plus(50),
+            }),
+          },
+          transaction: {
+            create: jest.fn().mockResolvedValue({
+              id: 'tx1',
+              type: 'DEPOSIT',
+              amount: decimal(50),
+              currency: 'IDR',
+              createdAt: new Date(),
+            }),
+          },
+        };
+        return await callback(ctx);
+      },
+    );
+
+    const result = await service.deposit('wallet-1', 'user-1', 50, 'IDR');
+    expect(result.wallet.balance.toString()).toBe('150');
+    expect(result.transaction.id).toBe('tx1');
   });
 });
