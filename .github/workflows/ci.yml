@@ -20,6 +20,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api prisma:generate
       - run: pnpm lint
       - run: pnpm test
 
@@ -46,6 +47,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api prisma:generate
       - run: pnpm migrate
 
   docker-images:
