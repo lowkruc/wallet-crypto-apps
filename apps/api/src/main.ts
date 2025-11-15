@@ -1,10 +1,27 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
 
+const parseOrigins = (value?: string | null): string[] | undefined => {
+  if (!value) return undefined;
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+};
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const corsOrigins = parseOrigins(process.env.CORS_ORIGINS);
+  const corsConfig: CorsOptions = {
+    origin: corsOrigins ?? true,
+    credentials: true,
+  };
+  app.enableCors(corsConfig);
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

@@ -34,6 +34,10 @@ Run these from the repository root so the shared env files load automatically:
 
 After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` locally (with `.env.local`) and commit both the migration folder under `apps/api/prisma/migrations` and the updated generated client.
 
+## API access & CORS
+
+`apps/api/src/main.ts` enables CORS automatically based on the `CORS_ORIGINS` env var (comma-separated). Update `.env.local` and `.env.production` with the allowed origins (e.g., `http://localhost:5173` for Vite dev, `https://wc.example.com` for production). The admin web uses `VITE_API_BASE_URL` env vars to target the correct host and relies on this CORS configuration to succeed.
+
 ## Auth module
 
 - `POST /auth/register` hashes the password with Argon2, creates a default IDR wallet, and returns the JWT plus wallet metadata.

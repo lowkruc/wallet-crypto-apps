@@ -35,6 +35,10 @@ The admin dashboard uses Tailwind CSS with shadcn/ui to enforce the pink→purpl
 
 Refer to `apps/admin-web/README.md` for day-to-day component guidance; keep root docs aligned whenever theme tokens or commands change.
 
+### API CORS
+
+The Nest API enables CORS automatically using `CORS_ORIGINS` (comma-separated list). In local dev, `.env.local` already allows the API (3100), admin (3200), and Vite dev server (5173). Update `.env.production` with the real admin/API domains so browser requests succeed in staging/production.
+
 ## Environment files
 
 Root env files supply values to both apps plus Docker/Make targets:
