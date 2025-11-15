@@ -31,6 +31,7 @@ The admin dashboard uses Tailwind CSS with shadcn/ui to enforce the pink→purpl
 - `pnpm --filter admin-web dev` – Vite dev server with Tailwind watch mode.
 - `pnpm --filter admin-web build` – type-check + bundle using the shared palette.
 - `pnpm --filter admin-web lint` – ESLint configured for React 19 + tailwind/shadcn helpers.
+- `pnpm --filter admin-web test` – Vitest + Testing Library suite that covers the login experience.
 
 Refer to `apps/admin-web/README.md` for day-to-day component guidance; keep root docs aligned whenever theme tokens or commands change.
 
