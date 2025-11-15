@@ -43,6 +43,7 @@ After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` 
 - `POST /auth/register` hashes the password with Argon2, creates a default IDR wallet, and returns the JWT plus wallet metadata.
 - `POST /auth/login` validates the credentials and issues a JWT signed by `JWT_SECRET`.
 - `GET /wallets/me` is guarded by `JwtAuthGuard` and returns the wallets connected to the authenticated user. Upcoming wallet tasks will extend this module with detailed summaries.
+- `GET /wallets/:id/transactions?limit=` returns the recent transactions for a wallet that belongs to the current user. Limit defaults to 20 and caps at 100.
 
 The Jest suite includes e2e-style specs (`src/auth/auth.controller.spec.ts`) that override Prisma with an in-memory adapter, so no local Postgres setup is needed to validate auth flows.
 

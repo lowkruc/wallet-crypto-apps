@@ -1,9 +1,13 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import type { Wallet } from '@prisma/client';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload';
 import { WalletsService } from './wallets.service';
+import { WalletDto } from './dto/wallet.dto';
+import {
+  WalletTransactionDto,
+  WalletTransactionsResponseDto,
+} from './dto/wallet-transactions-response.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('wallets')
@@ -11,7 +15,50 @@ export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
 
   @Get('me')
-  listMine(@CurrentUser() user: JwtPayload): Promise<Wallet[]> {
-    return this.walletsService.listMine(user.sub);
+  async listMine(@CurrentUser() user: JwtPayload): Promise<WalletDto[]> {
+    const wallets = await this.walletsService.listMine(user.sub);
+    return wallets.map((wallet) => ({
+      id: wallet.id,
+      userId: wallet.userId,
+      currency: wallet.currency,
+      balance: wallet.balance.toString(),
+      createdAt: wallet.createdAt,
+    }));
+  }
+
+  @Get(':id/transactions')
+  async listTransactions(
+    @Param('id') walletId: string,
+    @CurrentUser() user: JwtPayload,
+    @Query('limit') limit?: string,
+  ): Promise<WalletTransactionsResponseDto> {
+    const parsedLimit = Number(limit ?? 20);
+    const take =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 100)
+        : 20;
+    const result = await this.walletsService.listTransactions(
+      walletId,
+      user.sub,
+      take,
+    );
+    return {
+      wallet: {
+        id: result.wallet.id,
+        userId: result.wallet.userId,
+        balance: result.wallet.balance.toString(),
+        currency: result.wallet.currency,
+        createdAt: result.wallet.createdAt,
+      },
+      transactions: result.transactions.map<WalletTransactionDto>((tx) => ({
+        id: tx.id,
+        type: tx.type,
+        amount: tx.amount.toString(),
+        currency: tx.currency,
+        fromWalletId: tx.fromWalletId,
+        toWalletId: tx.toWalletId,
+        createdAt: tx.createdAt,
+      })),
+    };
   }
 }
