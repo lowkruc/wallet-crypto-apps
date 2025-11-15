@@ -25,6 +25,7 @@ RUN corepack enable
 COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=prod-deps /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
+COPY apps/api/prisma ./prisma
 COPY apps/api/package.json ./package.json
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma generate && npx prisma migrate deploy && node dist/main.js"]
