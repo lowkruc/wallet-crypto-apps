@@ -24,6 +24,16 @@ pnpm dev:admin      # admin only
 
 Shared scripts exist for build, lint, test, and migrations. Each command accepts per-app variants, so `pnpm lint:api` or `pnpm build:admin` work exactly as expected.
 
+### Admin web styling stack
+
+The admin dashboard uses Tailwind CSS with shadcn/ui to enforce the pink→purple palette and rounded CTA policy required by the global styling constraints. Tokens live in `apps/admin-web/src/index.css` and surface through `apps/admin-web/tailwind.config.ts`. Run the styling workflows from the repo root so shared env files are loaded:
+
+- `pnpm --filter admin-web dev` – Vite dev server with Tailwind watch mode.
+- `pnpm --filter admin-web build` – type-check + bundle using the shared palette.
+- `pnpm --filter admin-web lint` – ESLint configured for React 19 + tailwind/shadcn helpers.
+
+Refer to `apps/admin-web/README.md` for day-to-day component guidance; keep root docs aligned whenever theme tokens or commands change.
+
 ## Environment files
 
 Root env files supply values to both apps plus Docker/Make targets:

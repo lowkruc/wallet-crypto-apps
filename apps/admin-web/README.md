@@ -1,73 +1,33 @@
-# React + TypeScript + Vite
+# Admin Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite dashboard shell that consumes the NestJS wallet API from the monorepo. The UI is themed with Tailwind CSS tokens, shadcn/ui components, and an all-rounded clickable surface policy per the admin design brief.
 
-Currently, two official plugins are available:
+## Commands
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Run everything from the repository root so shared `.env.*` files are respected:
 
-## React Compiler
+| Command | Purpose |
+| --- | --- |
+| `pnpm --filter admin-web dev` | Start the Vite dev server with Tailwind in watch mode. |
+| `pnpm --filter admin-web build` | Type-check and build the production bundle. |
+| `pnpm --filter admin-web lint` | Run ESLint against the project. |
+| `pnpm --filter admin-web preview` | Preview the production build locally. |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Environment variables: set `VITE_API_BASE_URL` in `.env.local` for dev and `.env.production` for builds so both the API and admin stay aligned.
 
-## Expanding the ESLint configuration
+## Styling stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Tailwind CSS** drives utility classes with a container preset and disabled drop shadows.  
+- **Tokens:** `src/index.css` defines CSS variables (`--primary`, `--primary-pink`, `--primary-fuchsia`, `--primary-purple`, etc.) that map directly to the mandated pink→purple palette and are surfaced via `tailwind.config.ts`.  
+- **Rounded CTAs:** all button variants are derived from the shadcn button component, which defaults to `rounded-full`, while inputs use matching pills and focus rings colored by the primary palette.  
+- **Utilities:** common helpers such as the `cn` function live under `src/lib/utils.ts`.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## shadcn/ui workflow
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+`components.json` at the app root keeps the CLI aligned with Tailwind and the existing folder structure. To scaffold a new component:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm --filter admin-web dlx shadcn-ui@latest add <component>
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The generated files go into `src/components`, and the CLI automatically reuses the shared tokens and styling rules.
