@@ -74,6 +74,16 @@ pnpm --filter api run prisma:generate
 
 Docker Compose brings up PostgreSQL automatically. When the API container starts (locally or on the VM) it runs `prisma migrate deploy` before launching NestJS so schema changes deploy alongside the new release.
 
+### Entities
+
+Prisma currently tracks three core entities:
+
+- `User`: auth identity storing the reviewer’s email/name.
+- `Wallet`: belongs to a user, defaults to currency `IDR`, and keeps a decimal `balance`.
+- `Transaction`: logs deposits/transfers through the `TransactionType` enum and links to origin/destination wallets for analytics.
+
+Generated Prisma Client types surface these models inside the Nest services so future use cases (auth, deposit, transfer) can plug in immediately.
+
 ## CI/CD
 
 The workflow under `.github/workflows/ci.yml` runs whenever you push a `v*` tag. Jobs perform linting, testing, migration checks, then build and push three Docker images (API, admin, reverse proxy) to GHCR using the tag name. The final step SSHes into the target VM, pulls the new images, and restarts the stack with `.env.production`.

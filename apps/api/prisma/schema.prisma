@@ -11,6 +11,43 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
+  wallets   Wallet[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Wallet {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency  String        @default("IDR")
+  balance   Decimal       @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  incoming  Transaction[] @relation("toWallet")
+  outgoing  Transaction[] @relation("fromWallet")
+
+  @@index([userId, createdAt])
+  @@index([balance])
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  type          TransactionType
+  amount        Decimal
+  currency      String          @default("IDR")
+  fromWalletId  String?
+  toWalletId    String?
+  fromWallet    Wallet?         @relation("fromWallet", fields: [fromWalletId], references: [id], onDelete: SetNull)
+  toWallet      Wallet?         @relation("toWallet", fields: [toWalletId], references: [id], onDelete: SetNull)
+  createdAt     DateTime        @default(now())
+
+  @@index([type, amount])
+  @@index([toWalletId, createdAt])
+  @@index([fromWalletId, createdAt])
+}
+
+enum TransactionType {
+  DEPOSIT
+  TRANSFER
 }
