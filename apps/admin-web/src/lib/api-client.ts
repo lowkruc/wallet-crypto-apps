@@ -16,3 +16,21 @@ export const setAuthToken = (token?: string | null) => {
     delete apiClient.defaults.headers.common.Authorization
   }
 }
+
+type UnauthorizedHandler = () => void
+const unauthorizedHandlers = new Set<UnauthorizedHandler>()
+
+export const registerUnauthorizedHandler = (handler: UnauthorizedHandler) => {
+  unauthorizedHandlers.add(handler)
+  return () => unauthorizedHandlers.delete(handler)
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      unauthorizedHandlers.forEach((handler) => handler())
+    }
+    return Promise.reject(error)
+  },
+)

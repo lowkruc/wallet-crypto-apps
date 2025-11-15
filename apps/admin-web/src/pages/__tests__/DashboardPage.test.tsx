@@ -9,6 +9,7 @@ vi.mock('@/lib/api-client', () => ({
     get: vi.fn(),
     post: vi.fn(),
   },
+  registerUnauthorizedHandler: vi.fn(),
 }))
 
 const mockedApi = await import('@/lib/api-client')

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { apiClient, setAuthToken } from '@/lib/api-client'
+import { apiClient, registerUnauthorizedHandler, setAuthToken } from '@/lib/api-client'
 
 const STORAGE_KEY = 'wallet-admin-auth'
 
@@ -133,3 +133,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }))
+
+registerUnauthorizedHandler(() => {
+  const { token, logout } = useAuthStore.getState()
+  if (token) {
+    logout()
+  }
+  if (typeof window !== 'undefined') {
+    window.location.replace('/login')
+  }
+})
