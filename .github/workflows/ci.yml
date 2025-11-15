@@ -27,6 +27,8 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     needs: lint-test
+    container:
+      image: node:${{ env.NODE_VERSION }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -39,6 +41,8 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
