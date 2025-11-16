@@ -44,6 +44,7 @@ After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` 
 - `POST /auth/login` validates the credentials and issues a JWT signed by `JWT_SECRET`.
 - `GET /wallets/me` is guarded by `JwtAuthGuard` and returns the wallets connected to the authenticated user.
 - `POST /wallets/:id/deposit` validates ownership + positive amounts, updates balances inside a Prisma transaction, and returns the updated wallet plus the new transaction row.
+- `POST /wallets/transfer` debits the authenticated user’s primary wallet, looks up the target wallet by recipient email, enforces that balances never drop below zero using conditional updates, and records the transfer transaction atomically.
 - `GET /wallets/:id/transactions?limit=` returns the recent transactions for a wallet that belongs to the current user. Limit defaults to 20 and caps at 100.
 
 The Jest suite includes e2e-style specs (`src/auth/auth.controller.spec.ts`) that override Prisma with an in-memory adapter, so no local Postgres setup is needed to validate auth flows.

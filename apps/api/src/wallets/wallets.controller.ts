@@ -17,6 +17,7 @@ import {
   WalletTransactionsResponseDto,
 } from './dto/wallet-transactions-response.dto';
 import { DepositWalletDto } from './dto/deposit-wallet.dto';
+import { TransferWalletDto } from './dto/transfer-wallet.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('wallets')
@@ -96,6 +97,46 @@ export class WalletsController {
         type: result.transaction.type,
         amount: result.transaction.amount.toString(),
         currency: result.transaction.currency,
+        createdAt: result.transaction.createdAt,
+      },
+    };
+  }
+
+  @Post('transfer')
+  async transfer(
+    @Body() dto: TransferWalletDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const result = await this.walletsService.transfer(
+      user.sub,
+      user.email,
+      user.walletId,
+      dto.recipientEmail,
+      dto.amount,
+    );
+
+    return {
+      fromWallet: {
+        id: result.fromWallet.id,
+        userId: result.fromWallet.userId,
+        balance: result.fromWallet.balance.toString(),
+        currency: result.fromWallet.currency,
+        createdAt: result.fromWallet.createdAt,
+      },
+      toWallet: {
+        id: result.toWallet.id,
+        userId: result.toWallet.userId,
+        balance: result.toWallet.balance.toString(),
+        currency: result.toWallet.currency,
+        createdAt: result.toWallet.createdAt,
+      },
+      transaction: {
+        id: result.transaction.id,
+        type: result.transaction.type,
+        amount: result.transaction.amount.toString(),
+        currency: result.transaction.currency,
+        fromWalletId: result.transaction.fromWalletId,
+        toWalletId: result.transaction.toWalletId,
         createdAt: result.transaction.createdAt,
       },
     };

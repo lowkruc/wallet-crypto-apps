@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Wallet, Wallet2, RefreshCcw, Plus } from 'lucide-react'
+import type { FormEvent } from 'react'
+import { Wallet, Wallet2, RefreshCcw, Plus, ArrowRightLeft } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,28 @@ type DepositForm = {
   walletId: string
   amount: string
   currency: string
+}
+
+type TransferForm = {
+  recipientEmail: string
+  amount: string
+}
+
+const resolveApiErrorMessage = (error: unknown) => {
+  if (typeof error === 'object' && error !== null) {
+    const response = (error as { response?: { data?: { message?: string | string[] } } }).response
+    const message = response?.data?.message
+    if (typeof message === 'string') {
+      return message
+    }
+    if (Array.isArray(message) && message.length > 0 && typeof message[0] === 'string') {
+      return message[0]
+    }
+  }
+  if (error instanceof Error) {
+    return error.message
+  }
+  return null
 }
 
 const formatBalance = (value: string, currency: string) => {
@@ -45,6 +68,13 @@ const DashboardPage = () => {
     amount: '',
     currency: 'IDR',
   })
+  const [transferForm, setTransferForm] = useState<TransferForm>({
+    recipientEmail: '',
+    amount: '',
+  })
+  const [transferError, setTransferError] = useState<string | null>(null)
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
 
   const primaryWalletId = user?.walletId
 
@@ -71,6 +101,63 @@ const DashboardPage = () => {
 
   const highlightedWallet = useMemo(() => wallets.find((wallet) => wallet.id === primaryWalletId), [wallets, primaryWalletId])
   const secondaryWallets = useMemo(() => wallets.filter((wallet) => wallet.id !== primaryWalletId), [wallets, primaryWalletId])
+  const availableBalance = useMemo(() => {
+    if (!highlightedWallet) {
+      return 0
+    }
+    const parsed = Number(highlightedWallet.balance)
+    return Number.isFinite(parsed) ? parsed : 0
+  }, [highlightedWallet])
+
+  const handleTransferSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setTransferError(null)
+
+    if (!highlightedWallet) {
+      setTransferError('You need an active wallet before sending funds.')
+      return
+    }
+
+    const normalizedEmail = transferForm.recipientEmail.trim().toLowerCase()
+    if (!normalizedEmail) {
+      setTransferError('Enter the recipient email before continuing.')
+      return
+    }
+
+    if (user?.email && normalizedEmail === user.email.toLowerCase()) {
+      setTransferError('You can’t send funds to your own email.')
+      return
+    }
+
+    const amountValue = Number(transferForm.amount)
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      setTransferError('Enter an amount greater than zero.')
+      return
+    }
+
+    if (amountValue > availableBalance) {
+      setTransferError('Amount exceeds the available balance.')
+      return
+    }
+
+    setIsTransferring(true)
+    try {
+      await apiClient.post('/wallets/transfer', {
+        recipientEmail: transferForm.recipientEmail.trim(),
+        amount: amountValue,
+      })
+      setTransferForm({ recipientEmail: '', amount: '' })
+      setTransferError(null)
+      setIsTransferModalOpen(false)
+      void fetchWallets()
+    } catch (error) {
+      console.error(error)
+      const message = resolveApiErrorMessage(error) ?? 'Transfer failed. Please try again.'
+      setTransferError(message)
+    } finally {
+      setIsTransferring(false)
+    }
+  }
 
   const renderSkeleton = () => (
     <div className="grid gap-4 md:grid-cols-2">
@@ -132,20 +219,34 @@ const DashboardPage = () => {
                       <p className="text-base font-medium text-foreground">{highlightedWallet.currency}</p>
                     </div>
                   </div>
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      setDepositForm({
-                        walletId: highlightedWallet.id,
-                        currency: highlightedWallet.currency,
-                        amount: '',
-                      })
-                      setIsDepositing(true)
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Deposit funds
-                  </Button>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button
+                      className="flex-1"
+                      onClick={() => {
+                        setDepositForm({
+                          walletId: highlightedWallet.id,
+                          currency: highlightedWallet.currency,
+                          amount: '',
+                        })
+                        setIsDepositing(true)
+                      }}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Deposit funds
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => {
+                        setTransferError(null)
+                        setIsTransferModalOpen(true)
+                      }}
+                    >
+                      <ArrowRightLeft className="mr-2 h-4 w-4" />
+                      Transfer funds
+                    </Button>
+                  </div>
                 </>
               ) : loading ? (
                 <div className="space-y-2">
@@ -322,6 +423,96 @@ const DashboardPage = () => {
                   </Button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {isTransferModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-3xl border border-border/80 bg-background p-6 shadow-xl">
+              <div className="space-y-2 text-center">
+                <p className="text-xs uppercase tracking-[0.35em] text-primary/80">Transfer</p>
+                <h2 className="text-2xl font-semibold text-foreground">Send funds to another reviewer</h2>
+                <p className="text-sm text-muted-foreground">
+                  Transfers always debit your primary wallet and execute instantly.
+                </p>
+              </div>
+
+              {highlightedWallet ? (
+                <form className="mt-6 space-y-4" noValidate onSubmit={handleTransferSubmit}>
+                  <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                    <p>
+                      Available:{' '}
+                      <span className="font-semibold text-foreground">
+                        {formatBalance(highlightedWallet.balance, highlightedWallet.currency)}
+                      </span>
+                    </p>
+                    <p>Amounts above the available balance are blocked automatically.</p>
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="recipient-email" className="text-sm font-medium text-foreground">
+                      Recipient email
+                    </label>
+                    <Input
+                      id="recipient-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="reviewer@example.com"
+                      value={transferForm.recipientEmail}
+                      onChange={(event) =>
+                        setTransferForm((prev) => ({ ...prev, recipientEmail: event.target.value }))
+                      }
+                      disabled={isTransferring}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label htmlFor="transfer-amount" className="text-sm font-medium text-foreground">
+                      Amount to send ({highlightedWallet.currency})
+                    </label>
+                    <Input
+                      id="transfer-amount"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="0.00"
+                      value={transferForm.amount}
+                      onChange={(event) => setTransferForm((prev) => ({ ...prev, amount: event.target.value }))}
+                      disabled={isTransferring}
+                      required
+                    />
+                  </div>
+
+                  {transferError && (
+                    <p className="rounded-2xl border border-destructive/60 bg-destructive/10 px-4 py-2 text-sm text-destructive" role="alert">
+                      {transferError}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button type="submit" className="flex-1" disabled={isTransferring}>
+                      {isTransferring ? 'Sending…' : 'Send funds'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => {
+                        setIsTransferModalOpen(false)
+                        setTransferError(null)
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <p className="mt-6 text-center text-sm text-muted-foreground">
+                  Transfers unlock once a wallet is assigned to this profile.
+                </p>
+              )}
             </div>
           </div>
         )}

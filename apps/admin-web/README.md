@@ -28,7 +28,7 @@ Environment variables: set `VITE_API_BASE_URL` in `.env.local` for dev and `.env
 - `src/store/auth.ts` keeps JWT + reviewer profile in Zustand, persists them to `localStorage`, and injects the token into the shared Axios client (`src/lib/api-client.ts`).  
 - `src/pages/RegisterPage.tsx` handles account creation against `/auth/register`, captures name/email/password, and automatically signs reviewers in once the API provisions the default wallet.  
 - `src/pages/LoginPage.tsx` renders the shadcn-styled form that posts to `/auth/login`, validates errors inline, and routes to `/dashboard`.  
-- `src/pages/DashboardPage.tsx` is a protected route that pulls `/wallets/me`, highlights the primary wallet, lists additional balances, and exposes logout/refresh actions.
+- `src/pages/DashboardPage.tsx` is a protected route that pulls `/wallets/me`, highlights the primary wallet, lists additional balances, drives the deposit modal, and now includes a transfer panel that validates positive amounts, self-transfer rules, and insufficient-fund checks before calling `/wallets/transfer`.
 
 Testing relies on Vitest + Testing Library (`pnpm --filter admin-web test`). Spec files live next to the pages/components they exercise; for example `src/pages/__tests__/LoginPage.test.tsx` covers the happy/error flows of the sign-in screen.
 
