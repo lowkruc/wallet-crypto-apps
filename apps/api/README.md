@@ -28,7 +28,7 @@ Run these from the repository root so the shared env files load automatically:
 
 `apps/api/prisma/schema.prisma` defines the following models:
 
-- **User** – Reviewer identity with `email`, optional `name`, and timestamps.  
+- **User** – Reviewer identity with `email`, unique lowercase `username`, optional `name`, and timestamps.  
 - **Wallet** – Belongs to a user, defaults to currency `IDR`, stores a decimal `balance`, and keeps incoming/outgoing transaction relations.  
 - **Transaction** – Uses the `TransactionType` enum (`DEPOSIT`, `TRANSFER`) to track movements plus optional `fromWallet` / `toWallet` links for analytics queries. Indexes cover common filters (user/date, amount).
 
@@ -40,11 +40,11 @@ After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` 
 
 ## Auth & wallets
 
-- `POST /auth/register` hashes the password with Argon2, creates a default IDR wallet, and returns the JWT plus wallet metadata.
+- `POST /auth/register` hashes the password with Argon2, normalizes the supplied username (letters/numbers/underscores only), creates a default IDR wallet, and returns the JWT plus `{ id, email, username, walletId }`.
 - `POST /auth/login` validates the credentials and issues a JWT signed by `JWT_SECRET`.
 - `GET /wallets/me` is guarded by `JwtAuthGuard` and returns the wallets connected to the authenticated user.
 - `POST /wallets/:id/deposit` validates ownership + positive amounts, updates balances inside a Prisma transaction, and returns the updated wallet plus the new transaction row.
-- `POST /wallets/transfer` debits the authenticated user’s primary wallet, looks up the target wallet by recipient email, enforces that balances never drop below zero using conditional updates, and records the transfer transaction atomically.
+- `POST /wallets/transfer` debits the authenticated user’s primary wallet, looks up the target wallet by recipient username, enforces that balances never drop below zero using conditional updates, and records the transfer transaction atomically.
 - `GET /wallets/:id/transactions?limit=` returns the recent transactions for a wallet that belongs to the current user. Limit defaults to 20 and caps at 100.
 
 The Jest suite includes e2e-style specs (`src/auth/auth.controller.spec.ts`) that override Prisma with an in-memory adapter, so no local Postgres setup is needed to validate auth flows.

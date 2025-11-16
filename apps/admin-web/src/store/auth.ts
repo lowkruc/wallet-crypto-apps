@@ -6,6 +6,7 @@ const STORAGE_KEY = 'wallet-admin-auth'
 type AuthUser = {
   id: string
   email: string
+  username: string
   name?: string | null
   walletId: string
 }
@@ -22,6 +23,7 @@ type Credentials = {
 
 type RegisterPayload = {
   email: string
+  username: string
   password: string
   name?: string
 }
@@ -45,7 +47,22 @@ const readStoredSession = (): AuthResponse | null => {
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as AuthResponse) : null
+    if (!raw) {
+      return null
+    }
+    const parsed = JSON.parse(raw) as Partial<AuthResponse> & {
+      user?: Partial<AuthUser>
+    }
+    if (
+      typeof parsed?.accessToken === 'string' &&
+      parsed.user?.id &&
+      typeof parsed.user.email === 'string' &&
+      typeof parsed.user.username === 'string' &&
+      typeof parsed.user.walletId === 'string'
+    ) {
+      return parsed as AuthResponse
+    }
+    return null
   } catch {
     return null
   }

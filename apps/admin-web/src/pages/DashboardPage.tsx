@@ -24,7 +24,7 @@ type DepositForm = {
 }
 
 type TransferForm = {
-  recipientEmail: string
+  recipientUsername: string
   amount: string
 }
 
@@ -69,7 +69,7 @@ const DashboardPage = () => {
     currency: 'IDR',
   })
   const [transferForm, setTransferForm] = useState<TransferForm>({
-    recipientEmail: '',
+    recipientUsername: '',
     amount: '',
   })
   const [transferError, setTransferError] = useState<string | null>(null)
@@ -118,14 +118,14 @@ const DashboardPage = () => {
       return
     }
 
-    const normalizedEmail = transferForm.recipientEmail.trim().toLowerCase()
-    if (!normalizedEmail) {
-      setTransferError('Enter the recipient email before continuing.')
+    const normalizedUsername = transferForm.recipientUsername.trim().toLowerCase()
+    if (!normalizedUsername) {
+      setTransferError('Enter the recipient username before continuing.')
       return
     }
 
-    if (user?.email && normalizedEmail === user.email.toLowerCase()) {
-      setTransferError('You can’t send funds to your own email.')
+    if (user?.username && normalizedUsername === user.username.toLowerCase()) {
+      setTransferError('You can’t send funds to your own username.')
       return
     }
 
@@ -143,10 +143,10 @@ const DashboardPage = () => {
     setIsTransferring(true)
     try {
       await apiClient.post('/wallets/transfer', {
-        recipientEmail: transferForm.recipientEmail.trim(),
+        recipientUsername: transferForm.recipientUsername.trim(),
         amount: amountValue,
       })
-      setTransferForm({ recipientEmail: '', amount: '' })
+      setTransferForm({ recipientUsername: '', amount: '' })
       setTransferError(null)
       setIsTransferModalOpen(false)
       void fetchWallets()
@@ -184,7 +184,9 @@ const DashboardPage = () => {
 
   return (
     <AppLayout
-      title={`Welcome back, ${user?.name ?? user?.email ?? 'there'}`}
+      title={`Welcome back, ${
+        user?.name ?? (user?.username ? `@${user.username}` : user?.email ?? 'there')
+      }`}
       description="Balances, recent movements, and controls for your reviewer session."
       actions={refreshAction}
     >
@@ -451,17 +453,16 @@ const DashboardPage = () => {
                   </div>
 
                   <div className="space-y-2 text-left">
-                    <label htmlFor="recipient-email" className="text-sm font-medium text-foreground">
-                      Recipient email
+                    <label htmlFor="recipient-username" className="text-sm font-medium text-foreground">
+                      Recipient username
                     </label>
                     <Input
-                      id="recipient-email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="reviewer@example.com"
-                      value={transferForm.recipientEmail}
+                      id="recipient-username"
+                      autoComplete="off"
+                      placeholder="reviewer_handle"
+                      value={transferForm.recipientUsername}
                       onChange={(event) =>
-                        setTransferForm((prev) => ({ ...prev, recipientEmail: event.target.value }))
+                        setTransferForm((prev) => ({ ...prev, recipientUsername: event.target.value }))
                       }
                       disabled={isTransferring}
                       required

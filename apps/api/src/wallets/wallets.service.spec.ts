@@ -158,13 +158,7 @@ describe('WalletsService', () => {
 
   it('rejects transfers to self', async () => {
     await expect(
-      service.transfer(
-        'user-1',
-        'user@example.com',
-        'wallet-1',
-        'user@example.com',
-        10,
-      ),
+      service.transfer('user-1', 'userone', 'wallet-1', 'userone', 10),
     ).rejects.toThrow(BadRequestException);
     expect(prisma.wallet.findFirst).not.toHaveBeenCalled();
   });
@@ -182,13 +176,7 @@ describe('WalletsService', () => {
     prisma.user.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.transfer(
-        'user-1',
-        'user@example.com',
-        'wallet-1',
-        'friend@example.com',
-        50,
-      ),
+      service.transfer('user-1', 'userone', 'wallet-1', 'frienduser', 50),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -204,18 +192,13 @@ describe('WalletsService', () => {
     prisma.wallet.findFirst.mockResolvedValue(wallet);
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-2',
+      username: 'frienduser',
       email: 'friend@example.com',
       wallets: [],
     });
 
     await expect(
-      service.transfer(
-        'user-1',
-        'user@example.com',
-        'wallet-1',
-        'friend@example.com',
-        50,
-      ),
+      service.transfer('user-1', 'userone', 'wallet-1', 'frienduser', 50),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -231,6 +214,7 @@ describe('WalletsService', () => {
     prisma.wallet.findFirst.mockResolvedValue(wallet);
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-2',
+      username: 'frienduser',
       email: 'friend@example.com',
       wallets: [
         {
@@ -255,13 +239,7 @@ describe('WalletsService', () => {
     );
 
     await expect(
-      service.transfer(
-        'user-1',
-        'user@example.com',
-        'wallet-1',
-        'friend@example.com',
-        150,
-      ),
+      service.transfer('user-1', 'userone', 'wallet-1', 'frienduser', 150),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -285,6 +263,7 @@ describe('WalletsService', () => {
     prisma.wallet.findFirst.mockResolvedValue(wallet);
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-2',
+      username: 'frienduser',
       email: 'friend@example.com',
       wallets: [recipientWallet],
     });
@@ -321,9 +300,9 @@ describe('WalletsService', () => {
 
     const result = await service.transfer(
       'user-1',
-      'user@example.com',
+      'userone',
       'wallet-1',
-      'friend@example.com',
+      'frienduser',
       25,
     );
 
@@ -375,9 +354,10 @@ describe('WalletsService transfer concurrency', () => {
       },
       user: {
         findUnique: jest.fn((args: Prisma.UserFindUniqueArgs) => {
-          if (args.where?.email === 'friend@example.com') {
+          if (args.where?.username === 'frienduser') {
             return Promise.resolve({
               id: 'user-2',
+              username: 'frienduser',
               email: 'friend@example.com',
               wallets: [recipientWallet],
             });
@@ -392,21 +372,29 @@ describe('WalletsService transfer concurrency', () => {
           const tx = {
             wallet: {
               updateMany: jest.fn((args: Prisma.WalletUpdateManyArgs) => {
+                const scopedArgs = args as Prisma.WalletUpdateManyArgs & {
+                  where?: {
+                    balance?: Prisma.DecimalFilter<'Wallet'>;
+                  };
+                  data?: {
+                    balance?: Prisma.DecimalFieldUpdateOperationsInput;
+                  };
+                };
                 if (
-                  args.where?.id !== senderWallet.id ||
-                  senderWallet.userId !== args.where?.userId
+                  scopedArgs.where?.id !== senderWallet.id ||
+                  senderWallet.userId !== scopedArgs.where?.userId
                 ) {
                   return Promise.resolve({ count: 0 });
                 }
                 const minBalance = decimal(
-                  (args.where?.balance?.gte ?? 0) as Prisma.Decimal.Value,
+                  (scopedArgs.where?.balance?.gte ?? 0) as Prisma.Decimal.Value,
                 );
                 if (senderWallet.balance.lt(minBalance)) {
                   return Promise.resolve({ count: 0 });
                 }
                 senderWallet.balance = senderWallet.balance.minus(
                   decimal(
-                    (args.data?.balance?.decrement ??
+                    (scopedArgs.data?.balance?.decrement ??
                       0) as Prisma.Decimal.Value,
                   ),
                 );
@@ -421,10 +409,15 @@ describe('WalletsService transfer concurrency', () => {
                 },
               ),
               update: jest.fn((args: Prisma.WalletUpdateArgs) => {
+                const scopedArgs = args as Prisma.WalletUpdateArgs & {
+                  data: {
+                    balance?: Prisma.DecimalFieldUpdateOperationsInput;
+                  };
+                };
                 if (args.where.id === recipientWallet.id) {
                   recipientWallet.balance = recipientWallet.balance.plus(
                     decimal(
-                      (args.data.balance?.increment ??
+                      (scopedArgs.data.balance?.increment ??
                         0) as Prisma.Decimal.Value,
                     ),
                   );
@@ -438,7 +431,7 @@ describe('WalletsService transfer concurrency', () => {
                 const txRecord = {
                   id: `tx-${transactions.length + 1}`,
                   type: 'TRANSFER',
-                  amount: decimal(args.data.amount),
+                  amount: decimal(args.data.amount as Prisma.Decimal.Value),
                   currency: args.data.currency as string,
                   fromWalletId: args.data.fromWalletId ?? null,
                   toWalletId: args.data.toWalletId ?? null,
@@ -457,20 +450,8 @@ describe('WalletsService transfer concurrency', () => {
     const service = new WalletsService(prismaStub);
 
     const [first, second] = await Promise.allSettled([
-      service.transfer(
-        'user-1',
-        'user@example.com',
-        'wallet-1',
-        'friend@example.com',
-        80,
-      ),
-      service.transfer(
-        'user-1',
-        'user@example.com',
-        'wallet-1',
-        'friend@example.com',
-        80,
-      ),
+      service.transfer('user-1', 'userone', 'wallet-1', 'frienduser', 80),
+      service.transfer('user-1', 'userone', 'wallet-1', 'frienduser', 80),
     ]);
 
     const failures = [first, second].filter(

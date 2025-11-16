@@ -6,7 +6,62 @@ import { Prisma, User, Wallet } from '@prisma/client';
 import { AppModule } from '../app.module';
 import { PrismaService } from '../prisma/prisma.service';
 
+type UserCreateInputShape = {
+  email: string;
+  username: string;
+  name?: string | null;
+  passwordHash?: string | null;
+  wallets?: {
+    create?:
+      | Prisma.WalletCreateWithoutUserInput
+      | Prisma.WalletCreateWithoutUserInput[];
+  };
+};
+
+type UserIncludeShape = {
+  wallets?: {
+    orderBy?: { createdAt?: 'asc' | 'desc' };
+    take?: number;
+  };
+};
+
+type UserWhereUniqueShape = {
+  email?: string;
+  username?: string;
+};
+
 class InMemoryPrismaService {
+  private resolveCreatedAtOrder(
+    orderBy:
+      | Prisma.WalletOrderByWithRelationInput
+      | Prisma.WalletOrderByWithRelationInput[]
+      | undefined,
+  ): 'asc' | 'desc' | undefined {
+    if (!orderBy || Array.isArray(orderBy)) {
+      return undefined;
+    }
+    return orderBy.createdAt;
+  }
+
+  private normalizeBalanceInput(
+    balance:
+      | Prisma.Decimal
+      | number
+      | string
+      | Prisma.DecimalJsLike
+      | undefined,
+  ): Prisma.Decimal.Value {
+    if (balance === undefined) {
+      return 0;
+    }
+    if (balance instanceof Prisma.Decimal) {
+      return balance;
+    }
+    if (typeof balance === 'number' || typeof balance === 'string') {
+      return balance;
+    }
+    return (balance as unknown as { toString(): string }).toString();
+  }
   private users: User[] = [];
   private wallets: Wallet[] = [];
 
@@ -14,9 +69,18 @@ class InMemoryPrismaService {
     create: ({
       data,
       include,
-    }: Prisma.UserCreateArgs): Promise<User & { wallets?: Wallet[] }> => {
-      const normalizedEmail = (data.email ?? '').toLowerCase();
-      if (this.users.some((u) => u.email === normalizedEmail)) {
+    }: {
+      data: UserCreateInputShape;
+      include?: UserIncludeShape;
+    }): Promise<User & { wallets?: Wallet[] }> => {
+      const normalizedEmail = data.email.toLowerCase();
+      const normalizedUsername = data.username.toLowerCase();
+      if (
+        this.users.some(
+          (u) =>
+            u.email === normalizedEmail || u.username === normalizedUsername,
+        )
+      ) {
         throw new Prisma.PrismaClientKnownRequestError(
           'Unique constraint failed',
           {
@@ -31,6 +95,7 @@ class InMemoryPrismaService {
       const user: User = {
         id: randomUUID(),
         email: normalizedEmail,
+        username: normalizedUsername,
         name: data.name ?? null,
         passwordHash: data.passwordHash ?? '',
         createdAt: now,
@@ -43,11 +108,12 @@ class InMemoryPrismaService {
           ? data.wallets.create
           : [data.wallets.create];
         walletsToCreate.forEach((walletInput) => {
+          const balanceValue = this.normalizeBalanceInput(walletInput.balance);
           const wallet: Wallet = {
             id: randomUUID(),
             userId: user.id,
             currency: walletInput.currency ?? 'IDR',
-            balance: new Prisma.Decimal(walletInput.balance ?? 0),
+            balance: new Prisma.Decimal(balanceValue),
             createdAt: now,
             updatedAt: now,
           };
@@ -55,10 +121,9 @@ class InMemoryPrismaService {
         });
       }
 
-      const createdWallets =
-        include?.wallets && typeof include.wallets !== 'boolean'
-          ? this.getUserWallets(user.id, include.wallets)
-          : undefined;
+      const createdWallets = include?.wallets
+        ? this.getUserWallets(user.id, include.wallets)
+        : undefined;
       return Promise.resolve({
         ...user,
         wallets: createdWallets,
@@ -67,19 +132,27 @@ class InMemoryPrismaService {
     findUnique: ({
       where,
       include,
-    }: Prisma.UserFindUniqueArgs): Promise<
-      (User & { wallets?: Wallet[] }) | null
-    > => {
-      const user = this.users.find(
-        (u) => u.email === where?.email?.toLowerCase(),
-      );
+    }: {
+      where: UserWhereUniqueShape;
+      include?: UserIncludeShape;
+    }): Promise<(User & { wallets?: Wallet[] }) | null> => {
+      const searchEmail = where.email?.toLowerCase();
+      const searchUsername = where.username?.toLowerCase();
+      const user = this.users.find((u) => {
+        if (searchEmail) {
+          return u.email === searchEmail;
+        }
+        if (searchUsername) {
+          return u.username === searchUsername;
+        }
+        return false;
+      });
       if (!user) {
         return Promise.resolve(null);
       }
-      const wallets =
-        include?.wallets && typeof include.wallets !== 'boolean'
-          ? this.getUserWallets(user.id, include.wallets)
-          : undefined;
+      const wallets = include?.wallets
+        ? this.getUserWallets(user.id, include.wallets)
+        : undefined;
       return Promise.resolve({ ...user, wallets });
     },
   };
@@ -92,10 +165,11 @@ class InMemoryPrismaService {
       let wallets = this.wallets.filter(
         (wallet) => wallet.userId === where?.userId,
       );
-      if (!Array.isArray(orderBy) && orderBy?.createdAt) {
+      const direction = this.resolveCreatedAtOrder(orderBy);
+      if (direction) {
         wallets = wallets.sort((a, b) => {
           const diff = a.createdAt.getTime() - b.createdAt.getTime();
-          return orderBy.createdAt === 'asc' ? diff : -diff;
+          return direction === 'asc' ? diff : -diff;
         });
       }
       return Promise.resolve(wallets);
@@ -111,10 +185,11 @@ class InMemoryPrismaService {
     include: Prisma.WalletFindManyArgs,
   ): Wallet[] {
     let wallets = this.wallets.filter((wallet) => wallet.userId === userId);
-    if (!Array.isArray(include.orderBy) && include.orderBy?.createdAt) {
+    const direction = this.resolveCreatedAtOrder(include.orderBy);
+    if (direction) {
       wallets = wallets.sort((a, b) => {
         const diff = a.createdAt.getTime() - b.createdAt.getTime();
-        return include.orderBy.createdAt === 'asc' ? diff : -diff;
+        return direction === 'asc' ? diff : -diff;
       });
     }
     if (include.take) {
@@ -131,7 +206,7 @@ describe('AuthController (e2e)', () => {
 
   const getAuthBody = (res: Response) =>
     res.body as {
-      user: { email: string; walletId: string };
+      user: { email: string; username: string; walletId: string };
       accessToken: string;
     };
 
@@ -155,6 +230,7 @@ describe('AuthController (e2e)', () => {
   it('registers a user and provisions a wallet', async () => {
     const payload = {
       email: 'user@example.com',
+      username: 'user_one',
       password: 'Password1',
       name: 'Wallet Reviewer',
     };
@@ -166,12 +242,17 @@ describe('AuthController (e2e)', () => {
 
     const body = getAuthBody(response);
     expect(body.user.email).toBe(payload.email);
+    expect(body.user.username).toBe(payload.username);
     expect(body.user.walletId).toBeDefined();
     expect(body.accessToken).toBeDefined();
   });
 
   it('logs in with existing credentials', async () => {
-    const payload = { email: 'hello@example.com', password: 'Password1' };
+    const payload = {
+      email: 'hello@example.com',
+      username: 'hello_user',
+      password: 'Password1',
+    };
     await request(server)
       .post('/auth/register')
       .send({ ...payload, name: 'Name' })
@@ -179,16 +260,21 @@ describe('AuthController (e2e)', () => {
 
     const response = await request(server)
       .post('/auth/login')
-      .send(payload)
+      .send({ email: payload.email, password: payload.password })
       .expect(200);
 
     const body = getAuthBody(response);
     expect(body.user.email).toBe(payload.email);
+    expect(body.user.username).toBe(payload.username);
     expect(body.accessToken).toBeDefined();
   });
 
   it('rejects invalid credentials', async () => {
-    const payload = { email: 'invalid@example.com', password: 'Password1' };
+    const payload = {
+      email: 'invalid@example.com',
+      username: 'invalid_user',
+      password: 'Password1',
+    };
     await request(server).post('/auth/register').send(payload).expect(201);
 
     await request(server)
@@ -200,9 +286,11 @@ describe('AuthController (e2e)', () => {
   it('enforces JWT guard on wallets endpoint', async () => {
     await request(server).get('/wallets/me').expect(401);
 
-    const registerResponse = await request(server)
-      .post('/auth/register')
-      .send({ email: 'guard@example.com', password: 'Password1' });
+    const registerResponse = await request(server).post('/auth/register').send({
+      email: 'guard@example.com',
+      username: 'guard_user',
+      password: 'Password1',
+    });
 
     const token = getAuthBody(registerResponse).accessToken;
     const walletsResponse = await request(server)

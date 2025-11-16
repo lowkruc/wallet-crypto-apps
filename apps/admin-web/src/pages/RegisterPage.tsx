@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { useAuthStore } from '@/store/auth'
 
+const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/i
+
 const RegisterPage = () => {
   const navigate = useNavigate()
   const token = useAuthStore((state) => state.token)
@@ -17,6 +19,7 @@ const RegisterPage = () => {
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -34,8 +37,18 @@ const RegisterPage = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setLocalError(null)
+    const normalizedUsername = username.trim()
+    if (!USERNAME_REGEX.test(normalizedUsername)) {
+      setLocalError('Usernames must be 3-30 characters using letters, numbers, or underscores.')
+      return
+    }
     try {
-      await register({ name: name || undefined, email, password })
+      await register({
+        name: name || undefined,
+        email,
+        username: normalizedUsername.toLowerCase(),
+        password,
+      })
       navigate('/dashboard', { replace: true })
     } catch {
       setLocalError('We could not create your account. Check the form and try again.')
@@ -95,6 +108,27 @@ const RegisterPage = () => {
                   required
                   placeholder="you@example.com"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium text-foreground">
+                  Username
+                </label>
+                <Input
+                  id="username"
+                  autoComplete="off"
+                  value={username}
+                  onChange={(event) => {
+                    if (error) clearError()
+                    if (localError) setLocalError(null)
+                    setUsername(event.target.value)
+                  }}
+                  required
+                  placeholder="reviewer_handle"
+                />
+                <p className="text-xs text-muted-foreground">
+                  3–30 characters using letters, numbers, or underscores. We’ll lowercase it automatically.
+                </p>
               </div>
 
               <div className="space-y-2">

@@ -42,6 +42,7 @@ describe('RegisterPage', () => {
 
     await user.type(screen.getByLabelText(/full name/i), 'Alex Reviewer')
     await user.type(screen.getByLabelText(/email/i), 'alex@example.com')
+    await user.type(screen.getByLabelText(/username/i), 'alex_reviewer')
     await user.type(screen.getByLabelText(/password/i), 'Password1')
     await user.click(screen.getByRole('button', { name: /create account/i }))
 
@@ -49,6 +50,7 @@ describe('RegisterPage', () => {
       expect(mockRegister).toHaveBeenCalledWith({
         name: 'Alex Reviewer',
         email: 'alex@example.com',
+        username: 'alex_reviewer',
         password: 'Password1',
       })
     })
@@ -66,6 +68,7 @@ describe('RegisterPage', () => {
     renderWithRouter()
 
     await user.type(screen.getByLabelText(/email/i), 'fail@example.com')
+    await user.type(screen.getByLabelText(/username/i), 'fail_user')
     await user.type(screen.getByLabelText(/password/i), 'Password1')
     await user.click(screen.getByRole('button', { name: /create account/i }))
 

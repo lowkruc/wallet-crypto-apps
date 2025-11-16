@@ -29,6 +29,7 @@ describe('DashboardPage', () => {
       user: {
         id: 'user-1',
         email: 'user@example.com',
+        username: 'userone',
         walletId: 'wallet-primary',
       },
       hydrated: true,
@@ -106,13 +107,13 @@ describe('DashboardPage', () => {
     const openTransferButton = await screen.findByRole('button', { name: /transfer funds/i })
     await user.click(openTransferButton)
     await screen.findByText(/send funds to another reviewer/i)
-    await user.type(screen.getByLabelText(/recipient email/i), 'friend@example.com')
+    await user.type(screen.getByLabelText(/recipient username/i), 'friend_user')
     await user.type(screen.getByLabelText(/amount to send/i), '50')
     await user.click(screen.getByRole('button', { name: /send funds/i }))
 
     await waitFor(() => {
       expect(mockedApi.apiClient.post).toHaveBeenCalledWith('/wallets/transfer', {
-        recipientEmail: 'friend@example.com',
+        recipientUsername: 'friend_user',
         amount: 50,
       })
     })
@@ -131,7 +132,7 @@ describe('DashboardPage', () => {
 
     const openTransferButton = await screen.findByRole('button', { name: /transfer funds/i })
     await user.click(openTransferButton)
-    await user.type(screen.getByLabelText(/recipient email/i), 'friend@example.com')
+    await user.type(screen.getByLabelText(/recipient username/i), 'friend_user')
     await user.type(screen.getByLabelText(/amount to send/i), '100')
     await user.click(screen.getByRole('button', { name: /send funds/i }))
 
@@ -152,11 +153,11 @@ describe('DashboardPage', () => {
 
     const openTransferButton = await screen.findByRole('button', { name: /transfer funds/i })
     await user.click(openTransferButton)
-    await user.type(screen.getByLabelText(/recipient email/i), 'user@example.com')
+    await user.type(screen.getByLabelText(/recipient username/i), 'userone')
     await user.type(screen.getByLabelText(/amount to send/i), '10')
     await user.click(screen.getByRole('button', { name: /send funds/i }))
 
-    await screen.findByText(/can’t send funds to your own email/i)
+    await screen.findByText(/can’t send funds to your own username/i)
     expect(mockedApi.apiClient.post).not.toHaveBeenCalled()
   })
 })

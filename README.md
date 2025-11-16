@@ -84,7 +84,7 @@ Docker Compose brings up PostgreSQL automatically. When the API container starts
 
 Prisma currently tracks three core entities:
 
-- `User`: auth identity storing the reviewer’s email/name.
+- `User`: auth identity storing the reviewer’s email, unique username, optional display name, and timestamps.
 - `Wallet`: belongs to a user, defaults to currency `IDR`, and keeps a decimal `balance`.
 - `Transaction`: logs deposits/transfers through the `TransactionType` enum and links to origin/destination wallets for analytics.
 
@@ -92,9 +92,10 @@ Generated Prisma Client types surface these models inside the Nest services. The
 
 ### Auth endpoints & wallets
 
-- `POST /auth/register` – accepts `{ email, password, name? }`, hashes the password, provisions a default IDR wallet, and returns `{ accessToken, user: { id, email, walletId } }`.
+- `POST /auth/register` – accepts `{ email, username, password, name? }`, normalizes the username to lowercase (letters/numbers/underscores only), hashes the password, provisions a default IDR wallet, and returns `{ accessToken, user: { id, email, username, walletId } }`.
 - `POST /auth/login` – validates credentials, issues a JWT (using `JWT_SECRET` / `JWT_EXPIRES_IN`), and returns the same payload.
 - `GET /wallets/me` – protected by the JWT guard; currently returns the wallets belonging to the token subject.
+- `POST /wallets/transfer` – debits the authenticated user’s primary wallet and credits the recipient resolved by username, enforcing self-transfer checks and balance floors via Prisma transactions.
 - `POST /wallets/:id/deposit` – validates ownership + positive amount, updates the balance within a Prisma transaction, and logs the movement.
 - `GET /wallets/:id/transactions?limit=` – returns paginated transactions for the wallet owned by the current user.
 

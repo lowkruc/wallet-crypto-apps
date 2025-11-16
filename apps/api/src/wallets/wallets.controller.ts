@@ -109,9 +109,9 @@ export class WalletsController {
   ) {
     const result = await this.walletsService.transfer(
       user.sub,
-      user.email,
+      user.username,
       user.walletId,
-      dto.recipientEmail,
+      dto.recipientUsername,
       dto.amount,
     );
 

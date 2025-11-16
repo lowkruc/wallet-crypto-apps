@@ -81,42 +81,40 @@ export class WalletsService {
 
   async transfer(
     currentUserId: string,
-    currentUserEmail: string,
+    currentUsername: string,
     walletId: string,
-    recipientEmail: string,
+    recipientUsername: string,
     amount: number,
   ) {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
 
-    const normalizedRecipientEmail = recipientEmail.trim().toLowerCase();
-    const normalizedCurrentEmail = currentUserEmail.trim().toLowerCase();
+    const normalizedRecipientUsername = recipientUsername.trim().toLowerCase();
+    const normalizedCurrentUsername = currentUsername.trim().toLowerCase();
 
-    if (normalizedRecipientEmail === normalizedCurrentEmail) {
+    if (normalizedRecipientUsername === normalizedCurrentUsername) {
       throw new BadRequestException('You cannot transfer to yourself');
     }
 
-    const [wallet, recipient] = await Promise.all([
-      this.prisma.wallet.findFirst({
-        where: { id: walletId, userId: currentUserId },
-      }),
-      this.prisma.user.findUnique({
-        where: { email: normalizedRecipientEmail },
-        include: {
-          wallets: {
-            orderBy: { createdAt: 'asc' },
-            take: 1,
-          },
+    const wallet = await this.prisma.wallet.findFirst({
+      where: { id: walletId, userId: currentUserId },
+    });
+    const recipient = await this.prisma.user.findUnique({
+      where: { username: normalizedRecipientUsername },
+      include: {
+        wallets: {
+          orderBy: { createdAt: 'asc' },
+          take: 1,
         },
-      }),
-    ]);
+      },
+    });
 
     if (!wallet) {
       throw new NotFoundException('Wallet not found');
     }
 
-    if (!recipient || recipient.wallets.length === 0) {
+    if (!recipient) {
       throw new NotFoundException('Recipient not found');
     }
 
@@ -124,7 +122,10 @@ export class WalletsService {
       throw new BadRequestException('You cannot transfer to yourself');
     }
 
-    const recipientWallet = recipient.wallets[0];
+    const [recipientWallet] = recipient.wallets;
+    if (!recipientWallet) {
+      throw new NotFoundException('Recipient not found');
+    }
 
     const { fromWallet, toWallet, transaction } =
       await this.prisma.$transaction(async (tx) => {

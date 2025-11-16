@@ -21,12 +21,14 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const email = dto.email.toLowerCase();
+    const username = dto.username.trim().toLowerCase();
     const passwordHash = await argon2.hash(dto.password);
 
     try {
       const user = await this.prisma.user.create({
         data: {
           email,
+          username,
           name: dto.name,
           passwordHash,
           wallets: {
@@ -43,16 +45,29 @@ export class AuthService {
         },
       });
 
-      const wallet = user.wallets.at(0);
+      const wallet = user.wallets?.[0];
       if (!wallet) {
         throw new BadRequestException('Failed to provision wallet');
       }
       return this.buildAuthResponse(user, wallet.id);
-    } catch (error) {
+    } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        const meta = error.meta as { target?: string | string[] } | undefined;
+        const targets = Array.isArray(meta?.target)
+          ? meta?.target
+          : meta?.target
+            ? [meta.target]
+            : [];
+        if (
+          targets.some(
+            (value) => typeof value === 'string' && value.includes('username'),
+          )
+        ) {
+          throw new BadRequestException('Username is already taken');
+        }
         throw new BadRequestException('Email is already registered');
       }
       throw error;
@@ -79,7 +94,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const wallet = user.wallets.at(0);
+    const wallet = user.wallets?.[0];
     if (!wallet) {
       throw new UnauthorizedException('Wallet not found');
     }
@@ -91,6 +106,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
+      username: user.username,
       walletId,
     };
     const accessToken = this.jwtService.sign(payload);
@@ -100,6 +116,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         name: user.name,
         walletId,
       },
