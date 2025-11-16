@@ -98,6 +98,8 @@ Generated Prisma Client types surface these models inside the Nest services. The
 - `POST /wallets/transfer` – debits the authenticated user’s primary wallet and credits the recipient resolved by username, enforcing self-transfer checks and balance floors via Prisma transactions.
 - `POST /wallets/:id/deposit` – validates ownership + positive amount, updates the balance within a Prisma transaction, and logs the movement.
 - `GET /wallets/:id/transactions?limit=` – returns paginated transactions for the wallet owned by the current user.
+- `GET /analytics/users/:id/top-transactions?limit=&startDate=&endDate=` – surfaces the signed largest debits/credits for the authenticated user, ordering by absolute value and rendering outbound transfers as negatives. Optional date range query params filter `createdAt`.
+- `GET /analytics/top-users?limit=&startDate=&endDate=` – ranks reviewers by their aggregated outbound transfer totals using Prisma group-by queries with the same optional date filters.
 
 ## CI/CD
 

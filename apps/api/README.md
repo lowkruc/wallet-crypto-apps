@@ -47,6 +47,11 @@ After editing the schema, run `pnpm --filter api migrate:dev -- --name <label>` 
 - `POST /wallets/transfer` debits the authenticated user’s primary wallet, looks up the target wallet by recipient username, enforces that balances never drop below zero using conditional updates, and records the transfer transaction atomically.
 - `GET /wallets/:id/transactions?limit=` returns the recent transactions for a wallet that belongs to the current user. Limit defaults to 20 and caps at 100.
 
+## Analytics
+
+- `GET /analytics/users/:id/top-transactions?limit=&startDate=&endDate=` – returns the authenticated user’s largest credits/debits sorted by absolute value, returning outbound transfers as negative amounts alongside counterparty metadata. The optional date range parameters apply inclusive filters on `createdAt`.
+- `GET /analytics/top-users?limit=&startDate=&endDate=` – aggregates outbound transfer totals by wallet owner and returns a ranked leaderboard used by the admin dashboard’s charts. Limits cap at 25 to keep queries efficient, and the optional date range mirrors the transaction endpoint.
+
 The Jest suite includes e2e-style specs (`src/auth/auth.controller.spec.ts`) that override Prisma with an in-memory adapter, so no local Postgres setup is needed to validate auth flows.
 
 ## Development flow

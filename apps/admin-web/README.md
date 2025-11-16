@@ -30,6 +30,13 @@ Environment variables: set `VITE_API_BASE_URL` in `.env.local` for dev and `.env
 - `src/pages/LoginPage.tsx` renders the shadcn-styled form that posts to `/auth/login`, validates errors inline, and routes to `/dashboard`.  
 - `src/pages/DashboardPage.tsx` is a protected route that pulls `/wallets/me`, highlights the primary wallet, lists additional balances, drives the deposit modal, and now uses a username-driven transfer modal that validates positive amounts, self-transfer rules, and insufficient-fund checks before calling `/wallets/transfer`.
 
+## Analytics widgets
+
+- The dashboard consumes the new analytics endpoints via Axios, memoizes responses, and renders two charts powered by **Recharts** (`BarChart` for personal movements, `AreaChart` for the outbound leaderboard).  
+- Charts inherit the same rounded, shadow-free styling as the rest of the UI, reuse the pink→purple palette (`--primary`, `--primary-purple`, `--primary-fuchsia`), and gracefully degrade to helper copy or skeletons while data loads.  
+- Each widget includes a date range selector that re-fetches both analytics endpoints, plus detail modals (movements + leaderboard) so reviewers can inspect the raw rows without overwhelming the charts.  
+- `src/pages/__tests__/DashboardPage.test.tsx` stubs these API calls and asserts that the analytics widgets render data/error states so regressions are caught in CI.
+
 Testing relies on Vitest + Testing Library (`pnpm --filter admin-web test`). Spec files live next to the pages/components they exercise; for example `src/pages/__tests__/LoginPage.test.tsx` covers the happy/error flows of the sign-in screen.
 
 ## shadcn/ui workflow
